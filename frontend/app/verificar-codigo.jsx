@@ -10,7 +10,7 @@ import {
 
 export default function VerificarCodigo() {
   const router = useRouter();
-  const { correo } = useLocalSearchParams();
+  const { correo, modo } = useLocalSearchParams();
   const [codigo, setCodigo] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -40,13 +40,20 @@ export default function VerificarCodigo() {
         throw new Error(data.error);
       }
 
-      router.push({
-        pathname: "/crear-cuenta",
-        params: {
-          correo: data.correo,
-          codigo_estudiante: data.codigo_estudiante,
-        },
-      });
+      if (modo === "recuperar") {
+        router.push({
+          pathname: "/nueva-password",
+          params: { resetToken: data.resetToken },
+        });
+      } else {
+        router.push({
+          pathname: "/crear-cuenta",
+          params: {
+            correo: data.correo,
+            codigo_estudiante: data.codigo_estudiante,
+          },
+        });
+      }
     } catch (error) {
       Alert.alert("⚠️ No se pudo verificar", error.message);
     } finally {

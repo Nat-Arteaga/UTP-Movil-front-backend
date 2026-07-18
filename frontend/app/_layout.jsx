@@ -27,7 +27,7 @@ export default function RootLayout() {
         const idSesion = await AsyncStorage.getItem("userId");
         // "/genero" | "/intereses" | "/carrera" | "/usuario": pasos del
         // registro que solo tienen sentido cuando TODAVÍA no hay cuenta.
-        const rutasRegistro = ["/cuenta", "/ingresar", "/verificar-correo", "/verificar-codigo", "/crear-cuenta", "/genero", "/intereses", "/carrera", "/usuario"];
+        const rutasRegistro = ["/cuenta", "/ingresar", "/verificar-correo", "/verificar-codigo", "/crear-cuenta", "/genero", "/intereses", "/carrera", "/usuario", "/olvide-password", "/nueva-password"];
         const esRutaRegistro = rutasRegistro.includes(pathname);
 
         if (!idSesion && pathname !== "/login" && !esRutaRegistro) {

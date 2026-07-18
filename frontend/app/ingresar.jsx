@@ -110,6 +110,12 @@ export default function Ingresar() {
         </Text>
       </TouchableOpacity>
 
+      <TouchableOpacity style={{ marginTop: 16 }} onPress={() => router.push("/olvide-password")}>
+        <Text style={{ color: "#666", textAlign: "center" }}>
+          ¿Olvidaste tu contraseña?
+        </Text>
+      </TouchableOpacity>
+
       <TouchableOpacity style={{ marginTop: 16 }} onPress={() => router.push("/verificar-correo")}>
         <Text style={{ color: "#666", textAlign: "center" }}>
           No tengo cuenta, quiero crear una

@@ -69,6 +69,11 @@ const FORMATO_CORREO_UTP = /^u\d{8}@utp\.edu\.pe$/i;
 // temporales (5 min) y de un solo uso.
 const otpStore = new Map();
 
+// Tras verificar el código en modo "recuperar contraseña", se guarda un
+// token de un solo uso (10 min) que autoriza cambiar la contraseña sin
+// tener que volver a pedir el código: token -> { correo, expira }.
+const resetTokenStore = new Map();
+
 // ── Verificación de correo institucional (paso 1 del registro) ───
 
 // Genera un código de 6 dígitos, lo guarda temporalmente y lo envía por correo.
@@ -91,6 +96,50 @@ app.post("/api/auth/enviar-codigo", async (req, res) => {
       return res.status(409).json({
         success: false,
         error: "Ya existe una cuenta creada con ese correo. Inicia sesión en vez de crear una nueva.",
+      });
+    }
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+
+  const codigo = Math.floor(100000 + Math.random() * 900000).toString();
+  const expira = Date.now() + 5 * 60 * 1000; // 5 minutos
+  otpStore.set(correo, { codigo, expira });
+
+  try {
+    await enviarCorreoOTP(correo, codigo);
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Error enviando correo:", err.message);
+    otpStore.delete(correo);
+    res.status(500).json({
+      success: false,
+      error: "No se pudo enviar el correo. Intenta de nuevo en un momento.",
+    });
+  }
+});
+
+// Igual que /api/auth/enviar-codigo, pero para RECUPERAR una cuenta que ya
+// existe (revisa lo contrario: que la cuenta SÍ esté creada).
+app.post("/api/auth/enviar-codigo-recuperacion", async (req, res) => {
+  const correo = (req.body.correo || "").trim().toLowerCase();
+
+  if (!FORMATO_CORREO_UTP.test(correo)) {
+    return res.status(400).json({
+      success: false,
+      error: "Ingresa tu correo institucional (ej. u12345678@utp.edu.pe)",
+    });
+  }
+
+  try {
+    const existente = await pool.query(
+      `SELECT codigo_usu FROM usuarios WHERE LOWER(correo) = $1`,
+      [correo]
+    );
+    if (existente.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: "No existe ninguna cuenta creada con ese correo.",
       });
     }
   } catch (err) {
@@ -140,11 +189,73 @@ app.post("/api/auth/verificar-codigo", (req, res) => {
 
   otpStore.delete(correo); // se usa una sola vez
 
+  // Token de recuperación: solo sirve para cambiar la contraseña de ESE
+  // correo, una sola vez, y expira en 10 minutos.
+  const resetToken = crypto.randomBytes(32).toString("hex");
+  resetTokenStore.set(resetToken, { correo, expira: Date.now() + 10 * 60 * 1000 });
+
   res.json({
     success: true,
     correo,
     codigo_estudiante: correo.split("@")[0].toUpperCase(),
+    resetToken,
   });
+});
+
+// Cambia la contraseña usando el resetToken obtenido al verificar el código
+// (no pide la contraseña anterior, porque para eso es la recuperación).
+app.post("/api/auth/restablecer-password", async (req, res) => {
+  const { resetToken, password } = req.body;
+
+  const guardado = resetTokenStore.get(resetToken);
+
+  if (!guardado) {
+    return res.status(400).json({
+      success: false,
+      error: "El enlace de recuperación no es válido o ya se usó. Vuelve a solicitar el código.",
+    });
+  }
+
+  if (Date.now() > guardado.expira) {
+    resetTokenStore.delete(resetToken);
+    return res.status(400).json({
+      success: false,
+      error: "El tiempo para cambiar tu contraseña expiró. Vuelve a solicitar el código.",
+    });
+  }
+
+  if (!password || password.length < 6) {
+    return res.status(400).json({
+      success: false,
+      error: "La contraseña debe tener al menos 6 caracteres",
+    });
+  }
+
+  try {
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    const resultado = await pool.query(
+      `UPDATE usuarios SET password_hash = $1 WHERE LOWER(correo) = $2 RETURNING codigo_usu`,
+      [passwordHash, guardado.correo]
+    );
+
+    if (resultado.rows.length === 0) {
+      return res.status(404).json({ success: false, error: "No se encontró la cuenta" });
+    }
+
+    resetTokenStore.delete(resetToken); // se usa una sola vez
+
+    // Por seguridad, cerramos todas las sesiones activas de esa cuenta —
+    // si alguien más tenía una sesión abierta con la contraseña vieja, se
+    // le pide entrar de nuevo con la nueva.
+    await pool.query(`UPDATE sesiones SET activo = false WHERE codigo_usu = $1`, [
+      resultado.rows[0].codigo_usu,
+    ]);
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 // ── Rutas existentes (no se tocan) ──────────────────────────────
