@@ -14,6 +14,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useBottomNav } from "../../hooks/useBottomNav";
 import { useChat } from "../../hooks/useChat";
+import GrupoModal from "./GrupoModal";
 import styles from "./csschat";
 
 const InitialAvatar = ({ nombre, sizeStyle, textStyle }) => (
@@ -47,6 +48,7 @@ export default function Chat({ isTab = false, onGoToTab }) {
   const [textoInput, setTextoInput] = useState("");
   const [mostrarChat, setMostrarChat] = useState(false);
   const [msgMenuAbierto, setMsgMenuAbierto] = useState(null);
+  const [modalGrupoVisible, setModalGrupoVisible] = useState(false);
 
   const amigos = contactos.filter((item) => item.tipo === "amigo");
   const grupos  = contactos.filter((item) => item.tipo === "grupo");
@@ -147,7 +149,9 @@ export default function Chat({ isTab = false, onGoToTab }) {
             }}
           />
           <Ionicons name="search-outline" size={28} color="white" />
-          <Ionicons name="add-circle-outline" size={29} color="white" />
+          <TouchableOpacity onPress={() => setModalGrupoVisible(true)}>
+            <Ionicons name="add-circle-outline" size={29} color="white" />
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -454,6 +458,11 @@ export default function Chat({ isTab = false, onGoToTab }) {
           </TouchableOpacity>
         </View>
       )}
+
+      <GrupoModal
+        visible={modalGrupoVisible}
+        onClose={() => setModalGrupoVisible(false)}
+      />
     </SafeAreaView>
   );
 }

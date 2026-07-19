@@ -1,5 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useState } from "react";
 import { Image, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import GrupoModal from "./GrupoModal";
 import styles from "./cssListaContactos";
 const InitialAvatar = ({ nombre }) => (
   <View style={styles.initialAvatarContainer}>
@@ -14,6 +16,7 @@ export default function ListaContactos({
   chatSeleccionado,
   onSelectChat,
 }) {
+  const [modalVisible, setModalVisible] = useState(false);
   const amigos = contactos.filter((item) => item.tipo === "amigo");
   const grupos = contactos.filter((item) => item.tipo === "grupo");
 
@@ -49,9 +52,14 @@ export default function ListaContactos({
         </TouchableOpacity>
       ))}
 
-      <View style={[styles.sectionHeader, styles.marginTop]}>
-        <Ionicons name="people-outline" size={18} color="#E60023" />
-        <Text style={styles.sectionTitle}>SERVIDORES UTP+</Text>
+      <View style={[styles.sectionHeader, styles.marginTop, { justifyContent: "space-between" }]}>
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+          <Ionicons name="people-outline" size={18} color="#E60023" />
+          <Text style={styles.sectionTitle}>SERVIDORES UTP+</Text>
+        </View>
+        <TouchableOpacity onPress={() => setModalVisible(true)}>
+          <Ionicons name="add-circle-outline" size={22} color="#E60023" />
+        </TouchableOpacity>
       </View>
 
       {grupos.map((item) => (
@@ -73,6 +81,8 @@ export default function ListaContactos({
           </View>
         </TouchableOpacity>
       ))}
+
+      <GrupoModal visible={modalVisible} onClose={() => setModalVisible(false)} />
     </ScrollView>
   );
 }

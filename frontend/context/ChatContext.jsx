@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
-import { conectar, desconectar, getSocket } from "../services/socketService";
+import { conectar, desconectar, getSocket, SOCKET_URL } from "../services/socketService";
 
 const ChatContext = createContext(null);
 
@@ -192,6 +192,45 @@ export function ChatProvider({ children, userId = "1", nombreUsuario = "Yo" }) {
   },
   [userId]
   );
+  // ── Crear grupo con código de invitación ──────────────────────
+  const crearGrupo = useCallback(
+    async (nombre, descripcion) => {
+      const res = await fetch(`${SOCKET_URL}/api/grupos/crear`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nombre, descripcion, creadorId: userId }),
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || "No se pudo crear el grupo");
+
+      // Refrescar lista de chats para que aparezca el grupo nuevo
+      const socket = getSocket();
+      if (socket) socket.emit("usuario:conectar", { userId, nombre: nombreUsuario });
+
+      return data.data; // { idChat, codigo, nombre }
+    },
+    [userId, nombreUsuario]
+  );
+
+  // ── Unirse a un grupo existente con código de invitación ───────
+  const unirseGrupo = useCallback(
+    async (codigo) => {
+      const res = await fetch(`${SOCKET_URL}/api/grupos/unirse`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ codigo, userId }),
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || "Código inválido");
+
+      const socket = getSocket();
+      if (socket) socket.emit("usuario:conectar", { userId, nombre: nombreUsuario });
+
+      return data.data; // { idChat, nombre }
+    },
+    [userId, nombreUsuario]
+  );
+
   const reaccionarMensaje = useCallback(
   (msgId, emoji) => {
     const socket = getSocket();
@@ -225,6 +264,8 @@ export function ChatProvider({ children, userId = "1", nombreUsuario = "Yo" }) {
       eliminarMensaje,
       reaccionarMensaje, 
       crearChatPrivado, // ← nueva
+      crearGrupo,
+      unirseGrupo,
       conectado,
       quienEscribe,
     }}
