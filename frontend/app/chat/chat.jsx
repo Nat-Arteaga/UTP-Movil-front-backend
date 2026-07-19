@@ -49,9 +49,15 @@ export default function Chat({ isTab = false, onGoToTab }) {
   const [mostrarChat, setMostrarChat] = useState(false);
   const [msgMenuAbierto, setMsgMenuAbierto] = useState(null);
   const [modalGrupoVisible, setModalGrupoVisible] = useState(false);
+  const [busquedaActiva, setBusquedaActiva] = useState(false);
+  const [textoBusqueda, setTextoBusqueda] = useState("");
 
-  const amigos = contactos.filter((item) => item.tipo === "amigo");
-  const grupos  = contactos.filter((item) => item.tipo === "grupo");
+  const amigos = contactos
+    .filter((item) => item.tipo === "amigo")
+    .filter((item) => item.nombre.toLowerCase().includes(textoBusqueda.toLowerCase()));
+  const grupos = contactos
+    .filter((item) => item.tipo === "grupo")
+    .filter((item) => item.nombre.toLowerCase().includes(textoBusqueda.toLowerCase()));
 
   const navPaddingBottom = isTab ? 0 : paddingBottom;
 
@@ -148,7 +154,9 @@ export default function Chat({ isTab = false, onGoToTab }) {
               marginRight: 4,
             }}
           />
-          <Ionicons name="search-outline" size={28} color="white" />
+          <TouchableOpacity onPress={() => setBusquedaActiva((prev) => !prev)}>
+            <Ionicons name="search-outline" size={28} color="white" />
+          </TouchableOpacity>
           <TouchableOpacity onPress={() => setModalGrupoVisible(true)}>
             <Ionicons name="add-circle-outline" size={29} color="white" />
           </TouchableOpacity>
@@ -158,6 +166,27 @@ export default function Chat({ isTab = false, onGoToTab }) {
       {/* VISTA: Lista de contactos */}
       {!mostrarChat && (
         <ScrollView style={{ flex: 1, paddingHorizontal: 8 }}>
+          {busquedaActiva && (
+            <TextInput
+              style={{
+                backgroundColor: "#1A1A1A",
+                borderRadius: 10,
+                paddingHorizontal: 14,
+                paddingVertical: 10,
+                color: "#FFF",
+                marginBottom: 12,
+                marginHorizontal: 8,
+                marginTop: 8,
+                borderWidth: 1,
+                borderColor: "#2A2A2A",
+              }}
+              placeholder="Buscar amigo o grupo..."
+              placeholderTextColor="#888"
+              value={textoBusqueda}
+              onChangeText={setTextoBusqueda}
+              autoFocus
+            />
+          )}
           <Text style={[styles.sectionTitle, { marginLeft: 8, marginTop: 10, marginBottom: 10 }]}>AMIGOS</Text>
           {amigos.map((item) => (
             <TouchableOpacity
