@@ -18,4 +18,10 @@ router.get("/chats/:chatId/mensajes", ctrl.obtenerMensajes);
 // Buscar usuarios             →  GET /api/usuarios/buscar?q=texto
 router.get("/usuarios/buscar", ctrl.buscarUsuarios);
 
+// Crear grupo (genera código)  →  POST /api/grupos/crear
+router.post("/grupos/crear", ctrl.crearGrupo);
+
+// Unirse a grupo con código    →  POST /api/grupos/unirse
+router.post("/grupos/unirse", ctrl.unirseGrupo);
+
 module.exports = router;

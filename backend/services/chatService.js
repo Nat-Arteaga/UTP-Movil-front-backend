@@ -50,7 +50,7 @@ async function getChatsDeUsuario(userId) {
     return res.rows;
   } catch (err) {
     console.error("[getChatsDeUsuario] Error:", err.message);
-    return mock.contactos; // fallback al mock si falla
+    return []; // si falla la query, no reventar el servidor
   }
 }
 
@@ -95,6 +95,88 @@ async function obtenerOCrearChatPrivado(userId1, userId2) {
   } finally {
     client.release();
   }
+}
+
+// ─────────────────────────────────────────────────────────────
+// GRUPOS: crear y unirse por código de invitación
+// ─────────────────────────────────────────────────────────────
+function generarCodigoInvitacion() {
+  // Código legible: 6 caracteres, sin 0/O/1/I para evitar confusión
+  const alfabeto = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+  let codigo = "";
+  for (let i = 0; i < 6; i++) {
+    codigo += alfabeto[Math.floor(Math.random() * alfabeto.length)];
+  }
+  return codigo;
+}
+
+async function crearGrupo({ nombre, descripcion, creadorId }) {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    // Reintenta si por mala suerte el código generado ya existe (es UNIQUE)
+    let idChat, codigo;
+    for (let intento = 0; intento < 5; intento++) {
+      codigo = generarCodigoInvitacion();
+      try {
+        const res = await client.query(
+          `INSERT INTO chats (nombre, descripcion, tipo_chat, creado_por, codigo_invitacion)
+           VALUES ($1, $2, 'grupo', $3, $4)
+           RETURNING id_chat`,
+          [nombre, descripcion || null, creadorId, codigo]
+        );
+        idChat = res.rows[0].id_chat;
+        break;
+      } catch (err) {
+        if (err.code === "23505" && intento < 4) continue; // unique_violation → reintenta
+        throw err;
+      }
+    }
+
+    await client.query(
+      `INSERT INTO participantes_chat (id_chat, codigo_usu, rol)
+       VALUES ($1, $2, 'admin')`,
+      [idChat, creadorId]
+    );
+
+    await client.query("COMMIT");
+    return { idChat, codigo, nombre };
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+async function unirseGrupoConCodigo({ codigo, userId }) {
+  const grupo = await pool.query(
+    `SELECT id_chat, nombre FROM chats WHERE codigo_invitacion = $1 AND tipo_chat = 'grupo'`,
+    [(codigo || "").toUpperCase()]
+  );
+
+  if (grupo.rows.length === 0) {
+    const err = new Error("Código de invitación inválido");
+    err.status = 404;
+    throw err;
+  }
+
+  const { id_chat: idChat, nombre } = grupo.rows[0];
+
+  const yaEsParticipante = await pool.query(
+    `SELECT 1 FROM participantes_chat WHERE id_chat = $1 AND codigo_usu = $2`,
+    [idChat, userId]
+  );
+
+  if (yaEsParticipante.rows.length === 0) {
+    await pool.query(
+      `INSERT INTO participantes_chat (id_chat, codigo_usu) VALUES ($1, $2)`,
+      [idChat, userId]
+    );
+  }
+
+  return { idChat, nombre };
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -165,6 +247,8 @@ async function actualizarPresencia(userId, estado) {
 module.exports = {
   getChatsDeUsuario,
   obtenerOCrearChatPrivado,
+  crearGrupo,
+  unirseGrupoConCodigo,
   getMensajes,
   guardarMensaje,
   buscarUsuarios,

@@ -53,4 +53,52 @@ async function buscarUsuarios(req, res) {
   }
 }
 
-module.exports = { listarChats, obtenerMensajes, buscarUsuarios };
+/**
+ * POST /api/grupos/crear
+ * body: { nombre, descripcion, creadorId }
+ * Crea un grupo nuevo y devuelve su código de invitación.
+ */
+async function crearGrupo(req, res) {
+  try {
+    const { nombre, descripcion, creadorId } = req.body;
+    if (!nombre || !creadorId) {
+      return res
+        .status(400)
+        .json({ success: false, error: "nombre y creadorId son requeridos" });
+    }
+    const grupo = await chatService.crearGrupo({ nombre, descripcion, creadorId });
+    res.json({ success: true, data: grupo });
+  } catch (err) {
+    console.error("[crearGrupo]", err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
+}
+
+/**
+ * POST /api/grupos/unirse
+ * body: { codigo, userId }
+ * Une al usuario a un grupo existente usando su código de invitación.
+ */
+async function unirseGrupo(req, res) {
+  try {
+    const { codigo, userId } = req.body;
+    if (!codigo || !userId) {
+      return res
+        .status(400)
+        .json({ success: false, error: "codigo y userId son requeridos" });
+    }
+    const grupo = await chatService.unirseGrupoConCodigo({ codigo, userId });
+    res.json({ success: true, data: grupo });
+  } catch (err) {
+    console.error("[unirseGrupo]", err.message);
+    res.status(err.status || 500).json({ success: false, error: err.message });
+  }
+}
+
+module.exports = {
+  listarChats,
+  obtenerMensajes,
+  buscarUsuarios,
+  crearGrupo,
+  unirseGrupo,
+};
