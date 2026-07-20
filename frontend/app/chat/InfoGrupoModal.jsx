@@ -5,6 +5,7 @@ import {
   ActivityIndicator,
   Alert,
   Modal,
+  ScrollView,
   Text,
   TextInput,
   TouchableOpacity,
@@ -27,6 +28,7 @@ export default function InfoGrupoModal({ visible, onClose, chat, onSalir }) {
   const [cargando, setCargando] = useState(true);
   const [nombreEdit, setNombreEdit] = useState(chat?.nombre || "");
   const [codigoActual, setCodigoActual] = useState(null);
+  const [mostrarIntegrantes, setMostrarIntegrantes] = useState(false);
 
   const soyAdmin = miembros.find((m) => String(m.id) === String(userId))?.rol === "admin";
 
@@ -46,6 +48,7 @@ export default function InfoGrupoModal({ visible, onClose, chat, onSalir }) {
   useEffect(() => {
     if (visible) {
       setNombreEdit(chat?.nombre || "");
+      setMostrarIntegrantes(false);
       cargarMiembros();
     }
   }, [visible, chat?.id]);
@@ -128,107 +131,152 @@ export default function InfoGrupoModal({ visible, onClose, chat, onSalir }) {
             <Ionicons name="close" size={22} color="#999" />
           </TouchableOpacity>
 
-          <Text style={{ color: "#FFF", fontSize: 18, fontWeight: "800", marginBottom: 4 }}>
+          <Text style={{ color: "#FFF", fontSize: 18, fontWeight: "800", marginBottom: 16 }}>
             {chat?.nombre}
           </Text>
-          <Text style={{ color: "#888", fontSize: 12, marginBottom: 16 }}>
-            {miembros.length} {miembros.length === 1 ? "miembro" : "miembros"}
-          </Text>
 
-          {soyAdmin && (
+          {!mostrarIntegrantes ? (
             <>
-              <Text style={styles.label}>Nombre del grupo</Text>
-              <View style={{ flexDirection: "row", gap: 8 }}>
-                <TextInput
-                  style={[styles.input, { flex: 1 }]}
-                  value={nombreEdit}
-                  onChangeText={setNombreEdit}
-                  placeholderTextColor="#888"
-                />
-                <TouchableOpacity
-                  style={{ backgroundColor: "#E60023", borderRadius: 10, paddingHorizontal: 14, justifyContent: "center" }}
-                  onPress={handleGuardarNombre}
-                >
-                  <Ionicons name="checkmark" size={20} color="#FFF" />
-                </TouchableOpacity>
-              </View>
-
+              {/* Botón Integrantes */}
               <TouchableOpacity
-                style={{ flexDirection: "row", alignItems: "center", marginTop: 14, gap: 6 }}
-                onPress={handleRegenerarCodigo}
+                onPress={() => setMostrarIntegrantes(true)}
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  backgroundColor: "#1a1a1a",
+                  borderRadius: 12,
+                  padding: 14,
+                  marginBottom: 10,
+                  gap: 10,
+                }}
               >
-                <Ionicons name="refresh-outline" size={16} color="#E60023" />
-                <Text style={{ color: "#E60023", fontSize: 13, fontWeight: "700" }}>
-                  Regenerar código de invitación
+                <Ionicons name="people-outline" size={22} color="#fff" />
+                <Text style={{ color: "#fff", fontSize: 15, fontWeight: "700", flex: 1 }}>
+                  Integrantes
                 </Text>
+                <Ionicons name="chevron-forward" size={18} color="#555" />
               </TouchableOpacity>
 
-              {codigoActual && (
-                <TouchableOpacity style={[styles.codigoBox, { marginTop: 10, paddingVertical: 10 }]} onPress={copiarCodigo}>
-                  <Text style={[styles.codigoTexto, { fontSize: 18 }]}>{codigoActual}</Text>
-                  <Ionicons name="copy-outline" size={18} color="#E60023" />
-                </TouchableOpacity>
-              )}
-            </>
-          )}
-
-          <Text style={[styles.label, { marginTop: 18 }]}>Miembros</Text>
-
-          {cargando ? (
-            <ActivityIndicator color="#E60023" style={{ marginTop: 10 }} />
-          ) : (
-            <View style={{ marginTop: 6 }}>
-              {miembros.map((m) => (
-                <View
-                  key={m.id}
+              {/* Botón Salir — solo si no es General UTP+ */}
+              {chat?.nombre !== "General UTP+" && (
+                <TouchableOpacity
+                  onPress={handleSalir}
                   style={{
                     flexDirection: "row",
                     alignItems: "center",
-                    justifyContent: "space-between",
-                    paddingVertical: 8,
-                    borderBottomWidth: 1,
-                    borderBottomColor: "#2A2A2A",
+                    backgroundColor: "#1a1a1a",
+                    borderRadius: 12,
+                    padding: 14,
+                    gap: 10,
                   }}
                 >
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                    <View
-                      style={{
-                        width: 32,
-                        height: 32,
-                        borderRadius: 16,
-                        backgroundColor: "#2A2A2A",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
+                  <Ionicons name="exit-outline" size={22} color="#E60023" />
+                  <Text style={{ color: "#E60023", fontSize: 15, fontWeight: "700" }}>
+                    Salir del grupo
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </>
+          ) : (
+            <>
+              {/* Botón volver */}
+              <TouchableOpacity
+                onPress={() => setMostrarIntegrantes(false)}
+                style={{ flexDirection: "row", alignItems: "center", marginBottom: 12, gap: 6 }}
+              >
+                <Ionicons name="chevron-back" size={18} color="#E60023" />
+                <Text style={{ color: "#E60023", fontSize: 13 }}>Volver</Text>
+              </TouchableOpacity>
+
+              <Text style={{ color: "#888", fontSize: 12, marginBottom: 10 }}>
+                {miembros.length} {miembros.length === 1 ? "miembro" : "miembros"}
+              </Text>
+
+              {soyAdmin && (
+                <>
+                  <Text style={styles.label}>Nombre del grupo</Text>
+                  <View style={{ flexDirection: "row", gap: 8, marginBottom: 10 }}>
+                    <TextInput
+                      style={[styles.input, { flex: 1 }]}
+                      value={nombreEdit}
+                      onChangeText={setNombreEdit}
+                      placeholderTextColor="#888"
+                    />
+                    <TouchableOpacity
+                      style={{ backgroundColor: "#E60023", borderRadius: 10, paddingHorizontal: 14, justifyContent: "center" }}
+                      onPress={handleGuardarNombre}
                     >
-                      <Text style={{ color: "#FFF", fontWeight: "700" }}>
-                        {m.username?.charAt(0).toUpperCase()}
-                      </Text>
-                    </View>
-                    <View>
-                      <Text style={{ color: "#FFF", fontSize: 14 }}>{m.username}</Text>
-                      {m.rol === "admin" && (
-                        <Text style={{ color: "#E60023", fontSize: 11, fontWeight: "700" }}>ADMIN</Text>
-                      )}
-                    </View>
+                      <Ionicons name="checkmark" size={20} color="#FFF" />
+                    </TouchableOpacity>
                   </View>
 
-                  {soyAdmin && String(m.id) !== String(userId) && (
-                    <TouchableOpacity onPress={() => handleExpulsar(m)}>
-                      <Ionicons name="person-remove-outline" size={20} color="#E60023" />
+                  <TouchableOpacity
+                    style={{ flexDirection: "row", alignItems: "center", marginBottom: 14, gap: 6 }}
+                    onPress={handleRegenerarCodigo}
+                  >
+                    <Ionicons name="refresh-outline" size={16} color="#E60023" />
+                    <Text style={{ color: "#E60023", fontSize: 13, fontWeight: "700" }}>
+                      Regenerar código de invitación
+                    </Text>
+                  </TouchableOpacity>
+
+                  {codigoActual && (
+                    <TouchableOpacity
+                      style={[styles.codigoBox, { marginBottom: 14, paddingVertical: 10 }]}
+                      onPress={copiarCodigo}
+                    >
+                      <Text style={[styles.codigoTexto, { fontSize: 18 }]}>{codigoActual}</Text>
+                      <Ionicons name="copy-outline" size={18} color="#E60023" />
                     </TouchableOpacity>
                   )}
-                </View>
-              ))}
-            </View>
-          )}
+                </>
+              )}
 
-          <TouchableOpacity
-            style={[styles.primaryBtn, { backgroundColor: "#2A2A2A", marginTop: 18 }]}
-            onPress={handleSalir}
-          >
-            <Text style={[styles.primaryBtnText, { color: "#E60023" }]}>Salir del grupo</Text>
-          </TouchableOpacity>
+              {cargando ? (
+                <ActivityIndicator color="#E60023" style={{ marginTop: 10 }} />
+              ) : (
+                <ScrollView showsVerticalScrollIndicator={false}>
+                  {miembros.map((m) => (
+                    <View
+                      key={m.id}
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        paddingVertical: 8,
+                        borderBottomWidth: 1,
+                        borderBottomColor: "#2A2A2A",
+                      }}
+                    >
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                        <View style={{
+                          width: 32, height: 32, borderRadius: 16,
+                          backgroundColor: "#2A2A2A",
+                          alignItems: "center", justifyContent: "center",
+                        }}>
+                          <Text style={{ color: "#FFF", fontWeight: "700" }}>
+                            {m.username?.charAt(0).toUpperCase()}
+                          </Text>
+                        </View>
+                        <View>
+                          <Text style={{ color: "#FFF", fontSize: 14 }}>{m.username}</Text>
+                          {m.rol === "admin" && (
+                            <Text style={{ color: "#E60023", fontSize: 11, fontWeight: "700" }}>ADMIN</Text>
+                          )}
+                        </View>
+                      </View>
+
+                      {soyAdmin && String(m.id) !== String(userId) && (
+                        <TouchableOpacity onPress={() => handleExpulsar(m)}>
+                          <Ionicons name="person-remove-outline" size={20} color="#E60023" />
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  ))}
+                </ScrollView>
+              )}
+            </>
+          )}
         </View>
       </View>
     </Modal>
