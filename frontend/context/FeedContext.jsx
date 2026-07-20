@@ -83,8 +83,14 @@ export function FeedProvider({ children }) {
     if (!texto?.trim()) return false;
     return withSession(async ({ token }) => {
       const data = await feedApi.addComment(token, id, texto.trim());
-      setPosts((previous) => previous.map((post) => String(post.id) === String(id)
-        ? { ...post, comments: [...(post.comments || []), data.comment] } : post));
+      setPosts((previous) => previous.map((post) => {
+        if (String(post.id) !== String(id)) return post;
+        const yaExiste = (post.comments || []).some(
+          (comment) => String(comment.id) === String(data.comment.id),
+        );
+        if (yaExiste) return post;
+        return { ...post, comments: [...(post.comments || []), data.comment] };
+      }));
       return true;
     });
   }, [withSession]);

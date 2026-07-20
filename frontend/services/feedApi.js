@@ -54,6 +54,8 @@ export const feedApi = {
       texto: post.texto ?? post.contenido,
       categoria: post.categoria ?? post.tipo_post ?? "General",
       ...(post.visibilidad ? { visibilidad: post.visibilidad } : {}),
+      ...(post.mediaUrl ? { media_url: post.mediaUrl, media_type: post.mediaType } : {}),
+      ...(post.etiquetas ? { etiquetas: post.etiquetas } : {}),
     },
   }),
   updatePost: (token, id, post) => request(`/api/posts/${id}`, { method: "PUT", token, body: post }),

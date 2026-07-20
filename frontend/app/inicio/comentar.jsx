@@ -1,8 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Alert, FlatList, SafeAreaView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useFeed } from "../../context/FeedContext";
+import { formatRelativeTime } from "../../utils/time";
 import styles from "./csscomentar";
 
 export default function Comentar() {
@@ -12,14 +13,26 @@ export default function Comentar() {
   const post = posts.find((item) => String(item.id) === String(postId));
   const comentarios = post?.comments ?? [];
   const [nuevoComentario, setNuevoComentario] = useState("");
+  const [enviando, setEnviando] = useState(false);
+  // Además del estado (para re-renderizar el botón), se usa un ref porque
+  // setState es asíncrono: si el usuario toca "enviar" dos veces muy rápido
+  // (doble tap, o Enter del teclado + botón), el segundo tap puede ejecutarse
+  // antes de que el primer setEnviando(true) se refleje. Esa era la causa
+  // real de los comentarios duplicados: dos POST /comentarios en paralelo.
+  const enviandoRef = useRef(false);
 
   const agregarComentario = async () => {
-    if (!post || !nuevoComentario.trim()) return;
+    if (!post || !nuevoComentario.trim() || enviandoRef.current) return;
+    enviandoRef.current = true;
+    setEnviando(true);
     try {
       const created = await addComment(post.id, nuevoComentario);
       if (created) setNuevoComentario("");
     } catch (error) {
       Alert.alert("No se pudo comentar", error.message);
+    } finally {
+      enviandoRef.current = false;
+      setEnviando(false);
     }
   };
 
@@ -36,13 +49,23 @@ export default function Comentar() {
           </TouchableOpacity>
           <View style={styles.content}>
             <TouchableOpacity onPress={() => router.push({ pathname: "/inicio/perfilusuario", params: { nombre: item.usuario } })}><Text style={styles.user}>{item.usuario}</Text></TouchableOpacity>
-            <Text style={styles.text}>{item.texto}</Text><Text style={styles.time}>{item.hora}</Text>
+            <Text style={styles.text}>{item.texto}</Text><Text style={styles.time}>{formatRelativeTime(item.createdAt ?? item.hora)}</Text>
           </View>
         </View>}
       />
       <View style={styles.inputContainer}>
-        <TextInput placeholder="Escribe un comentario..." placeholderTextColor="#888" style={styles.input} value={nuevoComentario} onChangeText={setNuevoComentario} onSubmitEditing={agregarComentario} />
-        <TouchableOpacity onPress={agregarComentario}><Ionicons name="send" size={24} color="#E60023" /></TouchableOpacity>
+        <TextInput
+          placeholder="Escribe un comentario..."
+          placeholderTextColor="#888"
+          style={styles.input}
+          value={nuevoComentario}
+          onChangeText={setNuevoComentario}
+          onSubmitEditing={agregarComentario}
+          editable={!enviando}
+        />
+        <TouchableOpacity onPress={agregarComentario} disabled={enviando} style={enviando ? { opacity: 0.5 } : undefined}>
+          <Ionicons name="send" size={24} color="#E60023" />
+        </TouchableOpacity>
       </View>
     </SafeAreaView>
   );

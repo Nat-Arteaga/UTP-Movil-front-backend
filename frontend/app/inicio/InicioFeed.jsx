@@ -2,15 +2,36 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useMemo, useRef, useState } from "react";
 import {
+  Image,
   SafeAreaView,
   ScrollView,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { useVideoPlayer, VideoView } from "expo-video";
 import { useBottomNav } from "../../hooks/useBottomNav";
 import { useFeed } from "../../context/FeedContext";
+import { formatRelativeTime } from "../../utils/time";
 import styles from "./cssinicio";
+
+// Reproductor de video de una publicación. Se aisla en su propio
+// componente porque useVideoPlayer necesita llamarse igual en cada
+// render y no puede vivir dentro de un .map() del componente padre.
+function PostVideo({ uri }) {
+  const player = useVideoPlayer(uri, (instance) => {
+    instance.loop = false;
+  });
+  return (
+    <VideoView
+      style={{ width: "100%", aspectRatio: 16 / 9, borderRadius: 12, marginBottom: 10, backgroundColor: "#000" }}
+      player={player}
+      allowsFullscreen
+      allowsPictureInPicture
+      nativeControls
+    />
+  );
+}
 
 export default function InicioFeed({ isTab = false, onGoToTab }) {
   const router = useRouter();
@@ -27,18 +48,6 @@ export default function InicioFeed({ isTab = false, onGoToTab }) {
     () => [...new Set(posts.map((post) => post.group).filter(Boolean))],
     [posts],
   );
-
-  const getRelativeTime = (createdAt) => {
-    if (!createdAt) return "";
-    const timestamp = typeof createdAt === "number" ? createdAt : new Date(createdAt).getTime();
-    if (Number.isNaN(timestamp)) return "";
-    const minutes = Math.max(0, Math.floor((Date.now() - timestamp) / 60000));
-    if (minutes < 1) return "Ahora";
-    if (minutes < 60) return `${minutes} min`;
-    const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours} h`;
-    return `${Math.floor(hours / 24)} d`;
-  };
 
   const visiblePosts = useMemo(() => {
     const orderedPosts = [...posts];
@@ -176,7 +185,7 @@ export default function InicioFeed({ isTab = false, onGoToTab }) {
                 </View>
               </View>
               <View style={{ flexDirection: "row", alignItems: "center" }}>
-                <Text style={styles.time}>{getRelativeTime(post.createdAt)}</Text>
+                <Text style={styles.time}>{formatRelativeTime(post.createdAt)}</Text>
                 <TouchableOpacity
                   onPress={() => router.push({ pathname: "/inicio/configuracion", params: { postId: post.id } })}
                 >
@@ -192,9 +201,26 @@ export default function InicioFeed({ isTab = false, onGoToTab }) {
 
             <Text style={styles.postText}>{post.texto}</Text>
 
+            {post.mediaUrl && post.mediaType === "imagen" && (
+              <Image
+                source={{ uri: post.mediaUrl }}
+                style={{ width: "100%", aspectRatio: 4 / 3, borderRadius: 12, marginBottom: 10, backgroundColor: "#111" }}
+                resizeMode="cover"
+              />
+            )}
+            {post.mediaUrl && post.mediaType === "video" && <PostVideo uri={post.mediaUrl} />}
+
             <View style={[styles.category, { backgroundColor: post.colorCat }]}>
               <Text style={styles.categoryText}>{post.categoria}</Text>
             </View>
+
+            {Array.isArray(post.etiquetas) && post.etiquetas.length > 0 && (
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 6, marginBottom: 4 }}>
+                {post.etiquetas.map((tag) => (
+                  <Text key={tag} style={{ color: "#E60023", fontSize: 13, fontWeight: "600" }}>#{tag}</Text>
+                ))}
+              </View>
+            )}
 
             <View style={styles.actions}>
               <View style={styles.action}>

@@ -704,6 +704,31 @@ pool.connect()
       console.log("✅ Columnas de perfil_usuario verificadas/creadas");
     } catch (e) {
       console.warn("⚠️ No se pudieron crear las columnas adicionales:", e.message);
+    }
+
+    // ── Foto/video en publicaciones y sistema de etiquetas ──────────
+    try {
+      await client.query(`
+        ALTER TABLE posts
+        ADD COLUMN IF NOT EXISTS media_url TEXT,
+        ADD COLUMN IF NOT EXISTS media_type TEXT;
+      `);
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS etiquetas (
+          id_etiqueta SERIAL PRIMARY KEY,
+          nombre TEXT UNIQUE NOT NULL
+        );
+      `);
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS post_etiquetas (
+          id_post INTEGER NOT NULL REFERENCES posts(id_post) ON DELETE CASCADE,
+          id_etiqueta INTEGER NOT NULL REFERENCES etiquetas(id_etiqueta) ON DELETE CASCADE,
+          PRIMARY KEY (id_post, id_etiqueta)
+        );
+      `);
+      console.log("✅ Columnas de media y tablas de etiquetas verificadas/creadas");
+    } catch (e) {
+      console.warn("⚠️ No se pudieron crear media/etiquetas:", e.message);
     } finally {
       client.release();
     }
