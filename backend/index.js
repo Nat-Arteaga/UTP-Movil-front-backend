@@ -25,6 +25,9 @@ const io = new Server(server, {
   cors: { origin: "*", methods: ["GET", "POST"] },
 });
 
+const { setIO } = require("./services/ioBus");
+setIO(io);
+
 app.use(cors());
 app.use(express.json());
 

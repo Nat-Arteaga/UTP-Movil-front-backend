@@ -17,22 +17,23 @@ export const ThemeProvider = ({ children }) => {
   }, []);
 
   const loadTheme = async () => {
-    try {
-      const savedTheme = await getData(STORAGE_KEYS.THEME);
+  try {
+    const savedTheme = await getData(STORAGE_KEYS.THEME);
 
-      if (savedTheme === "light") {
-        setTheme(lightTheme);
-        setIsDark(false);
-      } else {
-        setTheme(lightTheme);
-        setIsDark(false);
-      }
-    } finally {
-      setLoading(false);
+    if (savedTheme === "dark") {
+      setTheme(darkTheme);
+      setIsDark(true);
+    } else {
+      setTheme(lightTheme);
+      setIsDark(false);
     }
-  };
+  } finally {
+    setLoading(false);
+  }
+};
 
-  const toggleTheme = async () => {
+const toggleTheme = async () => {
+  try {
     const newDark = !isDark;
 
     setIsDark(newDark);
@@ -44,7 +45,10 @@ export const ThemeProvider = ({ children }) => {
       setTheme(lightTheme);
       await saveData(STORAGE_KEYS.THEME, "light");
     }
-  };
+  } catch (error) {
+    console.log("Error cambiando tema:", error);
+  }
+};
 
   return (
     <ThemeContext.Provider

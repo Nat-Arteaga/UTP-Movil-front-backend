@@ -11,6 +11,8 @@ import {
   View,
 } from "react-native";
 import { useBottomNav } from "../../hooks/useBottomNav";
+import { useThemeContext } from "../../context/ThemeContext";
+import { useLanguageContext } from "../../context/LanguageContext";
 import styles from "./cssperfil";
 
 // Componentes del perfil
@@ -21,11 +23,14 @@ import ListaPublicaciones from "./ListaPublicaciones";
 import MenuDesplegable from "./MenuDesplegable";
 import PerfilHeader from "./PerfilHeader";
 import TarjetaPerfil from "./TarjetaPerfil";
+import Preferencias from "./Preferencias";
 
 export default function Perfil({ isTab = false, onGoToTab }) {
   const router = useRouter();
   const navigation = useNavigation();
   const { paddingBottom } = useBottomNav();
+  const { theme } = useThemeContext();
+  const { t } = useLanguageContext();
   const [menuVisible, setMenuVisible] = useState(false);
   const [usuario, setUsuario] = useState(null); // null = cargando
   const [error, setError] = useState(null);
@@ -137,14 +142,24 @@ export default function Perfil({ isTab = false, onGoToTab }) {
         <PerfilHeader onMenuPress={() => setMenuVisible(!menuVisible)} />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#E60023" />
-          <Text style={styles.loadingText}>Cargando perfil...</Text>
+          <Text style={styles.loadingText}>
+    {t("loading_profile")}
+</Text>
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={[styles.container, { paddingBottom: containerPaddingBottom }]}>
+    <SafeAreaView
+    style={[
+        styles.container,
+        {
+            paddingBottom: containerPaddingBottom,
+            backgroundColor: theme.colors.background,
+        },
+    ]}
+    >
       {/* HEADER */}
       <PerfilHeader onMenuPress={() => setMenuVisible(!menuVisible)} />
 
@@ -161,7 +176,7 @@ export default function Perfil({ isTab = false, onGoToTab }) {
               if (token) {
                 fetch(
                   "https://front-backend-utp-movil-production.up.railway.app/api/sesion/cerrar",
-                   {
+                  {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({ token }),
@@ -219,9 +234,18 @@ export default function Perfil({ isTab = false, onGoToTab }) {
       )}
 
       {/* CONTENIDO PRINCIPAL */}
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView
+    showsVerticalScrollIndicator={false}
+    style={{
+        backgroundColor: theme.colors.background,
+    }}
+>
+
         <TarjetaPerfil usuario={usuario} />
+
         <DatosRegistro usuario={usuario} />
+
+        <Preferencias />
 
         {!(usuario.privado === true || usuario.privado === "true") ? (
           <>
@@ -242,9 +266,18 @@ export default function Perfil({ isTab = false, onGoToTab }) {
 
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>COMUNIDADES</Text>
+              <Text
+                style={[
+                  styles.sectionTitle,
+                  {
+                    color: theme.colors.text,
+                  },
+                ]}
+              >
+                {t("communities")}
+              </Text>
                 <TouchableOpacity>
-                  <Text style={styles.verTodas}>Ver todas →</Text>
+                  <Text style={styles.verTodas}>{t("see_all")} → →</Text>
                 </TouchableOpacity>
               </View>
               <ListaComunidades comunidades={usuario.comunidades || []} />
@@ -252,9 +285,16 @@ export default function Perfil({ isTab = false, onGoToTab }) {
 
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>MIS PUBLICACIONES</Text>
+              <Text
+    style={[
+        styles.sectionTitle,
+        {
+            color: theme.colors.text,
+        },
+    ]}
+>{t("my_posts")}</Text>
                 <TouchableOpacity>
-                  <Text style={styles.verTodas}>Ver todas →</Text>
+                  <Text style={styles.verTodas}>{t("see_all")} →  →</Text>
                 </TouchableOpacity>
               </View>
               <ListaPublicaciones publicaciones={usuario.publicaciones || []} />
@@ -265,16 +305,29 @@ export default function Perfil({ isTab = false, onGoToTab }) {
             <View style={styles.lockCircle}>
               <Ionicons name="lock-closed" size={32} color="#888" />
             </View>
-            <Text style={styles.privadoTitle}>Este perfil es privado</Text>
+          <Text
+    style={[
+        styles.sectionTitle,
+        {
+            color: theme.colors.text,
+        },
+    ]}
+>{t("private_profile")}</Text>
             <Text style={styles.privadoSubtitle}>
-              Solo se muestra el nombre de usuario y carrera porque la privacidad está activa.
+              {t("private_profile_description")}
             </Text>
           </View>
         )}
 
         {/* BOTÓN CERRAR SESIÓN FINAL */}
-        <TouchableOpacity 
-          style={styles.logoutButton}
+      <TouchableOpacity 
+          style={[
+            styles.logoutButton,
+            {
+              backgroundColor: theme.colors.card,
+              borderColor: theme.colors.border,
+            },
+          ]}
           onPress={async () => {
             const token = await AsyncStorage.getItem("authToken");
             if (token) {
@@ -293,7 +346,7 @@ export default function Perfil({ isTab = false, onGoToTab }) {
           }}
         >
           <Ionicons name="log-out-outline" size={20} color="#E60023" />
-          <Text style={styles.logoutText}>Cerrar sesión</Text>
+          <Text style={styles.logoutText}>{t("logout")}</Text>
         </TouchableOpacity>
 
         <View style={{ height: 100 }} />
@@ -301,13 +354,22 @@ export default function Perfil({ isTab = false, onGoToTab }) {
 
       {/* BOTTOM NAV */}
       {!isTab && (
-        <View style={[styles.bottomNav, { paddingBottom }]}>
+        <View
+          style={[
+            styles.bottomNav,
+            {
+              paddingBottom,
+              backgroundColor: theme.colors.tabBar,
+              borderTopColor: theme.colors.border,
+            },
+          ]}
+        >
           <TouchableOpacity
             style={styles.navItem}
             onPress={() => router.push("/inicio/inicio")}
           >
             <Ionicons name="home-outline" size={26} color="#888" />
-            <Text style={styles.navText}>Inicio</Text>
+            <Text style={styles.navText}>{t("home")}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -315,7 +377,7 @@ export default function Perfil({ isTab = false, onGoToTab }) {
             onPress={() => router.push("/chat/chat")}
           >
             <Ionicons name="chatbubble-outline" size={26} color="#888" />
-            <Text style={styles.navText}>Chat</Text>
+            <Text style={styles.navText}>{t("chat")}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -328,12 +390,12 @@ export default function Perfil({ isTab = false, onGoToTab }) {
                 <Text style={styles.smallBadgeText}>3</Text>
               </View>
             </View>
-            <Text style={styles.navText}>Notificaciones</Text>
+            <Text style={styles.navText}>{t("notifications")}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.navItem}>
             <Ionicons name="person" size={26} color="#E60023" />
-            <Text style={[styles.navText, styles.navTextActive]}>Perfil</Text>
+            <Text style={[styles.navText, styles.navTextActive]}>{t("profile")}</Text>
           </TouchableOpacity>
         </View>
       )}

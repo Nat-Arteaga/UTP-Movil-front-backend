@@ -7,6 +7,41 @@
 // =============================================================
 
 const chatService = require("../services/chatService");
+const { getIO } = require("../services/ioBus");
+
+/**
+ * POST /api/mensajes/archivo  (multipart/form-data)
+ * fields: chatId, remitenteId, remitente, archivo (file)
+ * Sube el archivo a Storage, guarda el mensaje, y lo emite por socket.
+ */
+async function subirArchivoMensaje(req, res) {
+  try {
+    const { chatId, remitenteId, remitente } = req.body;
+    if (!chatId || !remitenteId || !req.file) {
+      return res
+        .status(400)
+        .json({ success: false, error: "chatId, remitenteId y archivo son requeridos" });
+    }
+
+    const msg = await chatService.guardarMensajeConArchivo({
+      chatId,
+      remitenteId,
+      remitente,
+      buffer: req.file.buffer,
+      nombreOriginal: req.file.originalname,
+      mimetype: req.file.mimetype,
+      tamano: req.file.size,
+    });
+
+    const io = getIO();
+    if (io) io.to(`chat_${chatId}`).emit("mensaje:nuevo", msg);
+
+    res.json({ success: true, data: msg });
+  } catch (err) {
+    console.error("[subirArchivoMensaje]", err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
+}
 
 /**
  * GET /api/chats?userId=xxx
@@ -95,10 +130,107 @@ async function unirseGrupo(req, res) {
   }
 }
 
+/**
+ * GET /api/grupos/:idChat/miembros
+ * Lista los miembros de un grupo con su rol.
+ */
+async function obtenerMiembrosGrupo(req, res) {
+  try {
+    const { idChat } = req.params;
+    const miembros = await chatService.obtenerMiembrosGrupo(idChat);
+    res.json({ success: true, data: miembros });
+  } catch (err) {
+    console.error("[obtenerMiembrosGrupo]", err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
+}
+
+/**
+ * POST /api/grupos/:idChat/expulsar
+ * body: { adminId, userIdExpulsar }
+ */
+async function expulsarMiembro(req, res) {
+  try {
+    const { idChat } = req.params;
+    const { adminId, userIdExpulsar } = req.body;
+    if (!adminId || !userIdExpulsar) {
+      return res.status(400).json({ success: false, error: "adminId y userIdExpulsar son requeridos" });
+    }
+    const resultado = await chatService.expulsarMiembro({ idChat, adminId, userIdExpulsar });
+    res.json({ success: true, data: resultado });
+  } catch (err) {
+    console.error("[expulsarMiembro]", err.message);
+    res.status(err.status || 500).json({ success: false, error: err.message });
+  }
+}
+
+/**
+ * PUT /api/grupos/:idChat
+ * body: { adminId, nombre, descripcion }
+ */
+async function actualizarGrupo(req, res) {
+  try {
+    const { idChat } = req.params;
+    const { adminId, nombre, descripcion } = req.body;
+    if (!adminId) {
+      return res.status(400).json({ success: false, error: "adminId es requerido" });
+    }
+    const grupo = await chatService.actualizarGrupo({ idChat, adminId, nombre, descripcion });
+    res.json({ success: true, data: grupo });
+  } catch (err) {
+    console.error("[actualizarGrupo]", err.message);
+    res.status(err.status || 500).json({ success: false, error: err.message });
+  }
+}
+
+/**
+ * POST /api/grupos/:idChat/salir
+ * body: { userId }
+ */
+async function salirDeGrupo(req, res) {
+  try {
+    const { idChat } = req.params;
+    const { userId } = req.body;
+    if (!userId) {
+      return res.status(400).json({ success: false, error: "userId es requerido" });
+    }
+    const resultado = await chatService.salirDeGrupo({ idChat, userId });
+    res.json({ success: true, data: resultado });
+  } catch (err) {
+    console.error("[salirDeGrupo]", err.message);
+    res.status(err.status || 500).json({ success: false, error: err.message });
+  }
+}
+
+/**
+ * POST /api/grupos/:idChat/regenerar-codigo
+ * body: { adminId }
+ */
+async function regenerarCodigoInvitacion(req, res) {
+  try {
+    const { idChat } = req.params;
+    const { adminId } = req.body;
+    if (!adminId) {
+      return res.status(400).json({ success: false, error: "adminId es requerido" });
+    }
+    const resultado = await chatService.regenerarCodigoInvitacion({ idChat, adminId });
+    res.json({ success: true, data: resultado });
+  } catch (err) {
+    console.error("[regenerarCodigoInvitacion]", err.message);
+    res.status(err.status || 500).json({ success: false, error: err.message });
+  }
+}
+
 module.exports = {
   listarChats,
   obtenerMensajes,
   buscarUsuarios,
   crearGrupo,
   unirseGrupo,
+  subirArchivoMensaje,
+  obtenerMiembrosGrupo,
+  expulsarMiembro,
+  actualizarGrupo,
+  salirDeGrupo,
+  regenerarCodigoInvitacion,
 };
