@@ -30,7 +30,9 @@ export default function InicioFeed({ isTab = false, onGoToTab }) {
 
   const getRelativeTime = (createdAt) => {
     if (!createdAt) return "";
-    const minutes = Math.max(0, Math.floor((Date.now() - createdAt) / 60000));
+    const timestamp = typeof createdAt === "number" ? createdAt : new Date(createdAt).getTime();
+    if (Number.isNaN(timestamp)) return "";
+    const minutes = Math.max(0, Math.floor((Date.now() - timestamp) / 60000));
     if (minutes < 1) return "Ahora";
     if (minutes < 60) return `${minutes} min`;
     const hours = Math.floor(minutes / 60);
@@ -42,10 +44,10 @@ export default function InicioFeed({ isTab = false, onGoToTab }) {
     const orderedPosts = [...posts];
 
     if (activeFilter === "destacados") {
-      return orderedPosts.sort((first, second) => second.likes - first.likes);
+      return orderedPosts.sort((first, second) => (Number(second.likes) || 0) - (Number(first.likes) || 0));
     }
     if (activeFilter === "recientes") {
-      return orderedPosts.sort((first, second) => second.createdAt - first.createdAt);
+      return orderedPosts.sort((first, second) => new Date(second.createdAt).getTime() - new Date(first.createdAt).getTime());
     }
     if (activeFilter === "siguiendo") {
       return orderedPosts.filter((post) => post.isFollowing);
