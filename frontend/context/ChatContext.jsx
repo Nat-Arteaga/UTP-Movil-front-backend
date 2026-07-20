@@ -231,6 +231,78 @@ export function ChatProvider({ children, userId = "1", nombreUsuario = "Yo" }) {
     [userId, nombreUsuario]
   );
 
+  // ── Administración de grupo ─────────────────────────────────────
+  const obtenerMiembrosGrupo = useCallback(async (idChat) => {
+    const res = await fetch(`${SOCKET_URL}/api/grupos/${idChat}/miembros`);
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || "No se pudo cargar la lista");
+    return data.data; // [{ id, username, avatar, rol }]
+  }, []);
+
+  const expulsarMiembro = useCallback(
+    async (idChat, userIdExpulsar) => {
+      const res = await fetch(`${SOCKET_URL}/api/grupos/${idChat}/expulsar`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ adminId: userId, userIdExpulsar }),
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || "No se pudo expulsar");
+      return data.data;
+    },
+    [userId]
+  );
+
+  const actualizarGrupo = useCallback(
+    async (idChat, nombre, descripcion) => {
+      const res = await fetch(`${SOCKET_URL}/api/grupos/${idChat}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ adminId: userId, nombre, descripcion }),
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || "No se pudo actualizar");
+
+      const socket = getSocket();
+      if (socket) socket.emit("usuario:conectar", { userId, nombre: nombreUsuario });
+
+      return data.data;
+    },
+    [userId, nombreUsuario]
+  );
+
+  const salirDeGrupo = useCallback(
+    async (idChat) => {
+      const res = await fetch(`${SOCKET_URL}/api/grupos/${idChat}/salir`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId }),
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || "No se pudo salir del grupo");
+
+      const socket = getSocket();
+      if (socket) socket.emit("usuario:conectar", { userId, nombre: nombreUsuario });
+
+      return data.data;
+    },
+    [userId, nombreUsuario]
+  );
+
+  const regenerarCodigoGrupo = useCallback(
+    async (idChat) => {
+      const res = await fetch(`${SOCKET_URL}/api/grupos/${idChat}/regenerar-codigo`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ adminId: userId }),
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || "No se pudo regenerar el código");
+      return data.data; // { codigo }
+    },
+    [userId]
+  );
+
   const reaccionarMensaje = useCallback(
   (msgId, emoji) => {
     const socket = getSocket();
@@ -266,8 +338,15 @@ export function ChatProvider({ children, userId = "1", nombreUsuario = "Yo" }) {
       crearChatPrivado, // ← nueva
       crearGrupo,
       unirseGrupo,
+      obtenerMiembrosGrupo,
+      expulsarMiembro,
+      actualizarGrupo,
+      salirDeGrupo,
+      regenerarCodigoGrupo,
       conectado,
       quienEscribe,
+      userId,
+      nombreUsuario,
     }}
     >
       {children}

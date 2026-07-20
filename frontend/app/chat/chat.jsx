@@ -14,7 +14,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useBottomNav } from "../../hooks/useBottomNav";
 import { useChat } from "../../hooks/useChat";
-import GrupoModal from "./GrupoModal";
+import InfoGrupoModal from "./InfoGrupoModal";
 import styles from "./csschat";
 
 const InitialAvatar = ({ nombre, sizeStyle, textStyle }) => (
@@ -48,16 +48,10 @@ export default function Chat({ isTab = false, onGoToTab }) {
   const [textoInput, setTextoInput] = useState("");
   const [mostrarChat, setMostrarChat] = useState(false);
   const [msgMenuAbierto, setMsgMenuAbierto] = useState(null);
-  const [modalGrupoVisible, setModalGrupoVisible] = useState(false);
-  const [busquedaActiva, setBusquedaActiva] = useState(false);
-  const [textoBusqueda, setTextoBusqueda] = useState("");
+  const [infoGrupoVisible, setInfoGrupoVisible] = useState(false);
 
-  const amigos = contactos
-    .filter((item) => item.tipo === "amigo")
-    .filter((item) => item.nombre.toLowerCase().includes(textoBusqueda.toLowerCase()));
-  const grupos = contactos
-    .filter((item) => item.tipo === "grupo")
-    .filter((item) => item.nombre.toLowerCase().includes(textoBusqueda.toLowerCase()));
+  const amigos = contactos.filter((item) => item.tipo === "amigo");
+  const grupos  = contactos.filter((item) => item.tipo === "grupo");
 
   const navPaddingBottom = isTab ? 0 : paddingBottom;
 
@@ -154,39 +148,14 @@ export default function Chat({ isTab = false, onGoToTab }) {
               marginRight: 4,
             }}
           />
-          <TouchableOpacity onPress={() => setBusquedaActiva((prev) => !prev)}>
-            <Ionicons name="search-outline" size={28} color="white" />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => setModalGrupoVisible(true)}>
-            <Ionicons name="add-circle-outline" size={29} color="white" />
-          </TouchableOpacity>
+          <Ionicons name="search-outline" size={28} color="white" />
+          <Ionicons name="add-circle-outline" size={29} color="white" />
         </View>
       </View>
 
       {/* VISTA: Lista de contactos */}
       {!mostrarChat && (
         <ScrollView style={{ flex: 1, paddingHorizontal: 8 }}>
-          {busquedaActiva && (
-            <TextInput
-              style={{
-                backgroundColor: "#1A1A1A",
-                borderRadius: 10,
-                paddingHorizontal: 14,
-                paddingVertical: 10,
-                color: "#FFF",
-                marginBottom: 12,
-                marginHorizontal: 8,
-                marginTop: 8,
-                borderWidth: 1,
-                borderColor: "#2A2A2A",
-              }}
-              placeholder="Buscar amigo o grupo..."
-              placeholderTextColor="#888"
-              value={textoBusqueda}
-              onChangeText={setTextoBusqueda}
-              autoFocus
-            />
-          )}
           <Text style={[styles.sectionTitle, { marginLeft: 8, marginTop: 10, marginBottom: 10 }]}>AMIGOS</Text>
           {amigos.map((item) => (
             <TouchableOpacity
@@ -251,7 +220,13 @@ export default function Chat({ isTab = false, onGoToTab }) {
                   : chatSeleccionado.estado}
               </Text>
             </View>
-            <Ionicons name="information-circle-outline" size={30} color="white" />
+            {chatSeleccionado.tipo === "grupo" ? (
+              <TouchableOpacity onPress={() => setInfoGrupoVisible(true)}>
+                <Ionicons name="information-circle-outline" size={30} color="white" />
+              </TouchableOpacity>
+            ) : (
+              <Ionicons name="information-circle-outline" size={30} color="white" />
+            )}
           </View>
 
           {/* Mensajes */}
@@ -472,6 +447,15 @@ export default function Chat({ isTab = false, onGoToTab }) {
             <Ionicons name="chatbubble" size={26} color="#E60023" />
             <Text style={[styles.navText, styles.navTextActive]}>Chat</Text>
           </TouchableOpacity>
+          <TouchableOpacity style={styles.navItem} onPress={() => router.push("/notificacion/notificaciones")}>
+            <View style={{ position: "relative" }}>
+              <Ionicons name="notifications-outline" size={26} color="#888" />
+              <View style={styles.smallBadge}>
+                <Text style={styles.smallBadgeText}>3</Text>
+              </View>
+            </View>
+            <Text style={styles.navText}>Notificaciones</Text>
+          </TouchableOpacity>
           <TouchableOpacity style={styles.navItem} onPress={() => router.push("/perfil/perfil")}>
             <Ionicons name="person-outline" size={26} color="#888" />
             <Text style={styles.navText}>Perfil</Text>
@@ -479,10 +463,14 @@ export default function Chat({ isTab = false, onGoToTab }) {
         </View>
       )}
 
-      <GrupoModal
-        visible={modalGrupoVisible}
-        onClose={() => setModalGrupoVisible(false)}
-      />
+      {chatSeleccionado?.tipo === "grupo" && (
+        <InfoGrupoModal
+          visible={infoGrupoVisible}
+          onClose={() => setInfoGrupoVisible(false)}
+          chat={chatSeleccionado}
+          onSalir={handleVolver}
+        />
+      )}
     </SafeAreaView>
   );
 }
