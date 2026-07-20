@@ -127,5 +127,62 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 18,
   },
+
+  preferenceItem: {
+  flexDirection: "row",
+  justifyContent: "space-between",
+  alignItems: "center",
+  paddingVertical: 14,
+},
+
+preferenceLeft: {
+  flexDirection: "row",
+  alignItems: "center",
+},
+
+preferenceText: {
+  color: "#FFF",
+  fontSize: 16,
+  marginLeft: 10,
+},
+
+preferenceValue: {
+  color: "#E60023",
+  fontWeight: "bold",
+},
+
+languageTitle: {
+  color: "#AAA",
+  marginTop: 18,
+  marginBottom: 10,
+  fontWeight: "600",
+},
+
+languageContainer: {
+  flexDirection: "row",
+  justifyContent: "space-between",
+},
+
+languageButton: {
+  flex: 1,
+  marginHorizontal: 4,
+  borderWidth: 1,
+  borderColor: "#444",
+  borderRadius: 8,
+  paddingVertical: 10,
+  alignItems: "center",
+},
+
+languageButtonActive: {
+  backgroundColor: "#E60023",
+  borderColor: "#E60023",
+},
+
+languageButtonText: {
+  color: "#FFF",
+  fontWeight: "bold",
+},
 });
+
+
 export default styles;
