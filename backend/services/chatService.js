@@ -310,6 +310,125 @@ async function actualizarPresencia(userId, estado) {
   );
 }
 
+// ─────────────────────────────────────────────────────────────
+// ADMINISTRACIÓN DE GRUPO
+// ─────────────────────────────────────────────────────────────
+
+// Verifica si un usuario es admin de un grupo
+async function esAdminDeGrupo(idChat, userId) {
+  const res = await pool.query(
+    `SELECT 1 FROM participantes_chat WHERE id_chat = $1 AND codigo_usu = $2 AND rol = 'admin'`,
+    [idChat, userId]
+  );
+  return res.rows.length > 0;
+}
+
+async function obtenerMiembrosGrupo(idChat) {
+  const res = await pool.query(
+    `SELECT u.codigo_usu AS id, u.username, u.foto_perfil AS avatar, pc.rol
+     FROM participantes_chat pc
+     JOIN usuarios u ON u.codigo_usu = pc.codigo_usu
+     WHERE pc.id_chat = $1 AND pc.estado = 'activo'
+     ORDER BY pc.rol = 'admin' DESC, u.username ASC`,
+    [idChat]
+  );
+  return res.rows;
+}
+
+async function expulsarMiembro({ idChat, adminId, userIdExpulsar }) {
+  const esAdmin = await esAdminDeGrupo(idChat, adminId);
+  if (!esAdmin) {
+    const err = new Error("No tienes permisos de administrador en este grupo");
+    err.status = 403;
+    throw err;
+  }
+  if (Number(adminId) === Number(userIdExpulsar)) {
+    const err = new Error("No puedes expulsarte a ti mismo, usa 'salir del grupo'");
+    err.status = 400;
+    throw err;
+  }
+  await pool.query(
+    `DELETE FROM participantes_chat WHERE id_chat = $1 AND codigo_usu = $2`,
+    [idChat, userIdExpulsar]
+  );
+  return { ok: true };
+}
+
+async function actualizarGrupo({ idChat, adminId, nombre, descripcion }) {
+  const esAdmin = await esAdminDeGrupo(idChat, adminId);
+  if (!esAdmin) {
+    const err = new Error("No tienes permisos de administrador en este grupo");
+    err.status = 403;
+    throw err;
+  }
+  const res = await pool.query(
+    `UPDATE chats SET nombre = COALESCE($1, nombre), descripcion = COALESCE($2, descripcion)
+     WHERE id_chat = $3
+     RETURNING id_chat AS id, nombre, descripcion`,
+    [nombre || null, descripcion ?? null, idChat]
+  );
+  return res.rows[0];
+}
+
+async function salirDeGrupo({ idChat, userId }) {
+  const participante = await pool.query(
+    `SELECT rol FROM participantes_chat WHERE id_chat = $1 AND codigo_usu = $2`,
+    [idChat, userId]
+  );
+  if (participante.rows.length === 0) {
+    const err = new Error("No perteneces a este grupo");
+    err.status = 404;
+    throw err;
+  }
+
+  await pool.query(
+    `DELETE FROM participantes_chat WHERE id_chat = $1 AND codigo_usu = $2`,
+    [idChat, userId]
+  );
+
+  // Si el que sale era el único admin, promueve al miembro más antiguo restante
+  if (participante.rows[0].rol === "admin") {
+    const otroAdmin = await pool.query(
+      `SELECT 1 FROM participantes_chat WHERE id_chat = $1 AND rol = 'admin'`,
+      [idChat]
+    );
+    if (otroAdmin.rows.length === 0) {
+      await pool.query(
+        `UPDATE participantes_chat SET rol = 'admin'
+         WHERE id_participante = (
+           SELECT id_participante FROM participantes_chat
+           WHERE id_chat = $1
+           ORDER BY fecha_union ASC
+           LIMIT 1
+         )`,
+        [idChat]
+      );
+    }
+  }
+
+  return { ok: true };
+}
+
+async function regenerarCodigoInvitacion({ idChat, adminId }) {
+  const esAdmin = await esAdminDeGrupo(idChat, adminId);
+  if (!esAdmin) {
+    const err = new Error("No tienes permisos de administrador en este grupo");
+    err.status = 403;
+    throw err;
+  }
+
+  for (let intento = 0; intento < 5; intento++) {
+    const codigo = generarCodigoInvitacion();
+    try {
+      await pool.query(`UPDATE chats SET codigo_invitacion = $1 WHERE id_chat = $2`, [codigo, idChat]);
+      return { codigo };
+    } catch (err) {
+      if (err.code === "23505" && intento < 4) continue;
+      throw err;
+    }
+  }
+}
+
 module.exports = {
   getChatsDeUsuario,
   obtenerOCrearChatPrivado,
@@ -321,4 +440,9 @@ module.exports = {
   actualizarPresencia,
   reportarMensaje,
   reaccionarMensaje,
+  obtenerMiembrosGrupo,
+  expulsarMiembro,
+  actualizarGrupo,
+  salirDeGrupo,
+  regenerarCodigoInvitacion,
 };
