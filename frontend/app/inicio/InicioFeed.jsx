@@ -30,7 +30,9 @@ export default function InicioFeed({ isTab = false, onGoToTab }) {
 
   const getRelativeTime = (createdAt) => {
     if (!createdAt) return "";
-    const minutes = Math.max(0, Math.floor((Date.now() - createdAt) / 60000));
+    const timestamp = typeof createdAt === "number" ? createdAt : new Date(createdAt).getTime();
+    if (Number.isNaN(timestamp)) return "";
+    const minutes = Math.max(0, Math.floor((Date.now() - timestamp) / 60000));
     if (minutes < 1) return "Ahora";
     if (minutes < 60) return `${minutes} min`;
     const hours = Math.floor(minutes / 60);
@@ -42,10 +44,10 @@ export default function InicioFeed({ isTab = false, onGoToTab }) {
     const orderedPosts = [...posts];
 
     if (activeFilter === "destacados") {
-      return orderedPosts.sort((first, second) => second.likes - first.likes);
+      return orderedPosts.sort((first, second) => (Number(second.likes) || 0) - (Number(first.likes) || 0));
     }
     if (activeFilter === "recientes") {
-      return orderedPosts.sort((first, second) => second.createdAt - first.createdAt);
+      return orderedPosts.sort((first, second) => new Date(second.createdAt).getTime() - new Date(first.createdAt).getTime());
     }
     if (activeFilter === "siguiendo") {
       return orderedPosts.filter((post) => post.isFollowing);
@@ -81,22 +83,6 @@ export default function InicioFeed({ isTab = false, onGoToTab }) {
             onPress={() => router.push({ pathname: "/inicio/verpublicaciones", params: { saved: "true" } })}
           >
             <Ionicons name="bookmark-outline" size={24} color="white" />
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => {
-              if (isTab && onGoToTab) {
-                onGoToTab(2); // Ir a notificaciones
-              } else {
-                router.push("/notificacion/notificaciones");
-              }
-            }}
-          >
-            <View style={{ position: "relative" }}>
-              <Ionicons name="notifications-outline" size={26} color="white" />
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>3</Text>
-              </View>
-            </View>
           </TouchableOpacity>
         </View>
       </View>
@@ -270,19 +256,6 @@ export default function InicioFeed({ isTab = false, onGoToTab }) {
           >
             <Ionicons name="chatbubble-outline" size={26} color="#888" />
             <Text style={styles.navText}>Chat</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.navItem}
-            onPress={() => router.push("/notificacion/notificaciones")}
-          >
-            <View style={{ position: "relative" }}>
-              <Ionicons name="notifications-outline" size={26} color="#888" />
-              <View style={styles.smallBadge}>
-                <Text style={styles.smallBadgeText}>3</Text>
-              </View>
-            </View>
-            <Text style={styles.navText}>Notificaciones</Text>
           </TouchableOpacity>
 
           <TouchableOpacity

@@ -15,6 +15,7 @@ const { Pool } = require("pg");
 const cors = require("cors");
 
 const chatRoutes = require("./routes/chatRoutes");
+const postsRoutes = require("./routes/postsRoutes");
 const registrarSocketsChat = require("./sockets/chatSocket");
 
 const app = express();
@@ -23,6 +24,9 @@ const server = http.createServer(app);  // ← http.Server para Socket.IO
 const io = new Server(server, {
   cors: { origin: "*", methods: ["GET", "POST"] },
 });
+
+const { setIO } = require("./services/ioBus");
+setIO(io);
 
 app.use(cors());
 app.use(express.json());
@@ -679,6 +683,7 @@ app.post("/api/auth/login", async (req, res) => {
 
 // ── Rutas nuevas del chat ────────────────────────────────────────
 app.use("/api", chatRoutes);
+app.use("/api/posts", postsRoutes);
 
 // ── Eventos Socket.IO ────────────────────────────────────────────
 registrarSocketsChat(io);

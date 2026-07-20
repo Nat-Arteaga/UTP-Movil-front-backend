@@ -17,6 +17,13 @@ export function useChat() {
     crearChatPrivado, // ← nueva
     crearGrupo,
     unirseGrupo,
+    obtenerMiembrosGrupo,
+    expulsarMiembro,
+    actualizarGrupo,
+    salirDeGrupo,
+    regenerarCodigoGrupo,
+    userId,
+    nombreUsuario,
   } = useChats();
 
   return {
@@ -35,5 +42,12 @@ export function useChat() {
     crearChatPrivado, // ← nueva
     crearGrupo,
     unirseGrupo,
+    obtenerMiembrosGrupo,
+    expulsarMiembro,
+    actualizarGrupo,
+    salirDeGrupo,
+    regenerarCodigoGrupo,
+    userId,
+    nombreUsuario,
   };
 }
