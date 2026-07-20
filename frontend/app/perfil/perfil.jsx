@@ -318,19 +318,6 @@ export default function Perfil({ isTab = false, onGoToTab }) {
             <Text style={styles.navText}>Chat</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.navItem}
-            onPress={() => router.push("/notificacion/notificaciones")}
-          >
-            <View style={{ position: "relative" }}>
-              <Ionicons name="notifications-outline" size={26} color="#888" />
-              <View style={styles.smallBadge}>
-                <Text style={styles.smallBadgeText}>3</Text>
-              </View>
-            </View>
-            <Text style={styles.navText}>Notificaciones</Text>
-          </TouchableOpacity>
-
           <TouchableOpacity style={styles.navItem}>
             <Ionicons name="person" size={26} color="#E60023" />
             <Text style={[styles.navText, styles.navTextActive]}>Perfil</Text>

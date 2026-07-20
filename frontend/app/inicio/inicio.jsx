@@ -11,13 +11,12 @@ import {
 } from "react-native";
 import { useBottomNav } from "../../hooks/useBottomNav";
 import Chat from "../chat/chat";
-import Notificaciones from "../notificacion/notificaciones";
 import Perfil from "../perfil/perfil";
 import styles from "./cssinicio";
 import InicioFeed from "./InicioFeed";
 
 const { width: screenWidth } = Dimensions.get("window");
-const TAB_WIDTH = screenWidth / 4; // Ancho de cada tab
+const TAB_WIDTH = screenWidth / 3; // Ancho de cada tab
 const LINE_WIDTH = 40; // Ancho de la línea roja
 
 export default function Inicio() {
@@ -53,20 +52,18 @@ export default function Inicio() {
     if (isScrollingRef.current) return;
     const xOffset = event.nativeEvent.contentOffset.x;
     const index = Math.round(xOffset / screenWidth);
-    if (index !== activeTab && index >= 0 && index < 4) {
+    if (index !== activeTab && index >= 0 && index < 3) {
       setActiveTab(index);
     }
   };
 
   // Calcular posición X de la línea (centrada en cada tab)
-  // Fórmula: (index * TAB_WIDTH) + (TAB_WIDTH / 2) - (LINE_WIDTH / 2)
   const linePosition = slideAnimation.interpolate({
-    inputRange: [0, 1, 2, 3],
+    inputRange: [0, 1, 2],
     outputRange: [
       TAB_WIDTH / 2 - LINE_WIDTH / 2, // Tab 0: Inicio
       TAB_WIDTH + TAB_WIDTH / 2 - LINE_WIDTH / 2, // Tab 1: Chat
-      TAB_WIDTH * 2 + TAB_WIDTH / 2 - LINE_WIDTH / 2, // Tab 2: Notificaciones
-      TAB_WIDTH * 3 + TAB_WIDTH / 2 - LINE_WIDTH / 2, // Tab 3: Perfil
+      TAB_WIDTH * 2 + TAB_WIDTH / 2 - LINE_WIDTH / 2, // Tab 2: Perfil
     ],
   });
 
@@ -88,9 +85,6 @@ export default function Inicio() {
         </View>
         <View style={{ width: screenWidth }}>
           <Chat isTab={true} onGoToTab={goToTab} />
-        </View>
-        <View style={{ width: screenWidth }}>
-          <Notificaciones isTab={true} onGoToTab={goToTab} />
         </View>
         <View style={{ width: screenWidth }}>
           <Perfil isTab={true} onGoToTab={goToTab} />
@@ -137,34 +131,15 @@ export default function Inicio() {
           </Text>
         </TouchableOpacity>
 
-        {/* NOTIFICACIONES TAB */}
-        <TouchableOpacity style={styles.navItem} onPress={() => goToTab(2)}>
-          <View style={{ position: "relative" }}>
-            <Ionicons
-              name={activeTab === 2 ? "notifications" : "notifications-outline"}
-              size={26}
-              color={activeTab === 2 ? "#E60023" : "#888"}
-            />
-            <View style={styles.smallBadge}>
-              <Text style={styles.smallBadgeText}>3</Text>
-            </View>
-          </View>
-          <Text
-            style={[styles.navText, activeTab === 2 && styles.navTextActive]}
-          >
-            Notificaciones
-          </Text>
-        </TouchableOpacity>
-
         {/* PERFIL TAB */}
-        <TouchableOpacity style={styles.navItem} onPress={() => goToTab(3)}>
+        <TouchableOpacity style={styles.navItem} onPress={() => goToTab(2)}>
           <Ionicons
-            name={activeTab === 3 ? "person" : "person-outline"}
+            name={activeTab === 2 ? "person" : "person-outline"}
             size={26}
-            color={activeTab === 3 ? "#E60023" : "#888"}
+            color={activeTab === 2 ? "#E60023" : "#888"}
           />
           <Text
-            style={[styles.navText, activeTab === 3 && styles.navTextActive]}
+            style={[styles.navText, activeTab === 2 && styles.navTextActive]}
           >
             Perfil
           </Text>

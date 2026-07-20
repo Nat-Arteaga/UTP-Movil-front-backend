@@ -472,15 +472,6 @@ export default function Chat({ isTab = false, onGoToTab }) {
             <Ionicons name="chatbubble" size={26} color="#E60023" />
             <Text style={[styles.navText, styles.navTextActive]}>Chat</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.navItem} onPress={() => router.push("/notificacion/notificaciones")}>
-            <View style={{ position: "relative" }}>
-              <Ionicons name="notifications-outline" size={26} color="#888" />
-              <View style={styles.smallBadge}>
-                <Text style={styles.smallBadgeText}>3</Text>
-              </View>
-            </View>
-            <Text style={styles.navText}>Notificaciones</Text>
-          </TouchableOpacity>
           <TouchableOpacity style={styles.navItem} onPress={() => router.push("/perfil/perfil")}>
             <Ionicons name="person-outline" size={26} color="#888" />
             <Text style={styles.navText}>Perfil</Text>

@@ -84,22 +84,6 @@ export default function InicioFeed({ isTab = false, onGoToTab }) {
           >
             <Ionicons name="bookmark-outline" size={24} color="white" />
           </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => {
-              if (isTab && onGoToTab) {
-                onGoToTab(2); // Ir a notificaciones
-              } else {
-                router.push("/notificacion/notificaciones");
-              }
-            }}
-          >
-            <View style={{ position: "relative" }}>
-              <Ionicons name="notifications-outline" size={26} color="white" />
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>3</Text>
-              </View>
-            </View>
-          </TouchableOpacity>
         </View>
       </View>
 
@@ -272,19 +256,6 @@ export default function InicioFeed({ isTab = false, onGoToTab }) {
           >
             <Ionicons name="chatbubble-outline" size={26} color="#888" />
             <Text style={styles.navText}>Chat</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.navItem}
-            onPress={() => router.push("/notificacion/notificaciones")}
-          >
-            <View style={{ position: "relative" }}>
-              <Ionicons name="notifications-outline" size={26} color="#888" />
-              <View style={styles.smallBadge}>
-                <Text style={styles.smallBadgeText}>3</Text>
-              </View>
-            </View>
-            <Text style={styles.navText}>Notificaciones</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
