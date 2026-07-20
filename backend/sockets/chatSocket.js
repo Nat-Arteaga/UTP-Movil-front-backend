@@ -6,7 +6,6 @@ const chatService = require("../services/chatService");
 const pool = require("../db");
 
 const usuariosConectados = new Map();
-const reacciones = new Map(); // ← agrega esta línea
 // ── Lista de palabras censuradas ──────────────────────────────
 const PALABRAS_CENSURADAS = [
   "conchetumadre",
@@ -64,16 +63,32 @@ function censurar(texto) {
   return resultado;
 }
 
+// Valida que el userId sea un entero válido de Postgres (evita crashear el server)
+function esUserIdValido(userId) {
+  const n = Number(userId);
+  return Number.isInteger(n) && n > 0 && n < 2147483647;
+}
+
 module.exports = function registrarSocketsChat(io) {
   io.on("connection", (socket) => {
     console.log(`[socket] conectado: ${socket.id}`);
 
     socket.on("usuario:conectar", async ({ userId, nombre }) => {
+      if (!esUserIdValido(userId)) {
+        console.error(`[usuario:conectar] userId inválido recibido: ${userId} (nombre: ${nombre})`);
+        socket.emit("chat:error", { mensaje: "Sesión inválida, vuelve a iniciar sesión." });
+        return;
+      }
+
       socket.data.userId = userId;
       socket.data.nombre = nombre;
       usuariosConectados.set(socket.id, { userId, nombre });
 
-      await chatService.actualizarPresencia(userId, "En línea");
+      try {
+        await chatService.actualizarPresencia(userId, "En línea");
+      } catch (err) {
+        console.error(`[usuario:conectar] Error actualizando presencia:`, err.message);
+      }
 
       socket.broadcast.emit("presencia:cambio", {
         userId,
@@ -81,41 +96,53 @@ module.exports = function registrarSocketsChat(io) {
         estado: "En línea",
       });
 
-      const chats = await chatService.getChatsDeUsuario(userId);
-      socket.emit("chat:listar", { chats });
+      try {
+        const chats = await chatService.getChatsDeUsuario(userId);
+        socket.emit("chat:listar", { chats });
+      } catch (err) {
+        console.error(`[usuario:conectar] Error listando chats:`, err.message);
+      }
 
       console.log(`[socket] usuario conectado: ${nombre} (${userId})`);
     });
 
     socket.on("chat:unirse", async ({ chatId }) => {
-      const rooms = [...socket.rooms].filter(
-        (r) => r !== socket.id && r.startsWith("chat_")
-      );
-      rooms.forEach((r) => socket.leave(r));
+      try {
+        const rooms = [...socket.rooms].filter(
+          (r) => r !== socket.id && r.startsWith("chat_")
+        );
+        rooms.forEach((r) => socket.leave(r));
 
-      socket.join(`chat_${chatId}`);
-      socket.data.chatActivo = chatId;
+        socket.join(`chat_${chatId}`);
+        socket.data.chatActivo = chatId;
 
-      const mensajes = await chatService.getMensajes(chatId);
-      socket.emit("mensajes:historial", { chatId, mensajes });
+        const mensajes = await chatService.getMensajes(chatId);
+        socket.emit("mensajes:historial", { chatId, mensajes });
 
-      console.log(`[socket] ${socket.data.nombre} unido a chat_${chatId}`);
+        console.log(`[socket] ${socket.data.nombre} unido a chat_${chatId}`);
+      } catch (err) {
+        console.error(`[chat:unirse] Error:`, err.message);
+      }
     });
 
     socket.on("mensaje:enviar", async ({ chatId, texto, remitente }) => {
       if (!texto || !texto.trim()) return;
 
-      const userId = socket.data.userId;
-      const nombreRemitente = remitente || socket.data.nombre || "Usuario";
+      try {
+        const userId = socket.data.userId;
+        const nombreRemitente = remitente || socket.data.nombre || "Usuario";
 
-      const mensaje = await chatService.guardarMensaje({
-        chatId,
-        texto: censurar(texto.trim()),
-        remitenteId: userId,
-        remitente: nombreRemitente,
-      });
+        const mensaje = await chatService.guardarMensaje({
+          chatId,
+          texto: censurar(texto.trim()),
+          remitenteId: userId,
+          remitente: nombreRemitente,
+        });
 
-      io.to(`chat_${chatId}`).emit("mensaje:nuevo", mensaje);
+        io.to(`chat_${chatId}`).emit("mensaje:nuevo", mensaje);
+      } catch (err) {
+        console.error(`[mensaje:enviar] Error:`, err.message);
+      }
     });
 
     socket.on("escribiendo:inicio", ({ chatId }) => {
@@ -145,21 +172,27 @@ module.exports = function registrarSocketsChat(io) {
     });
 
     // ── Reportar mensaje ─────────────────────────────────────
-    socket.on("mensaje:reportar", ({ msgId, chatId }) => {
-      console.log(`[reporte] msgId: ${msgId}, chatId: ${chatId}`);
-      const resultado = chatService.reportarMensaje(msgId, chatId);
-      console.log(`[reporte] resultado:`, resultado);
+    socket.on("mensaje:reportar", async ({ msgId, chatId }) => {
+      const reporterId = socket.data.userId;
+      console.log(`[reporte] msgId: ${msgId}, chatId: ${chatId}, por: ${reporterId}`);
+      try {
+        const resultado = await chatService.reportarMensaje({ msgId, chatId, reporterId });
+        console.log(`[reporte] resultado:`, resultado);
 
-      if (resultado.eliminado) {
-        io.to(`chat_${chatId}`).emit("mensaje:eliminado", {
-          msgId,
-          chatId,
-          textoReemplazado: "⚠️ Mensaje eliminado por límite de reportes",
-        });
-      } else {
-        socket.emit("reporte:confirmado", { msgId, reportes: resultado.reportes });
+        if (resultado.eliminado) {
+          io.to(`chat_${chatId}`).emit("mensaje:eliminado", {
+            msgId,
+            chatId,
+            textoReemplazado: "⚠️ Mensaje eliminado por límite de reportes",
+          });
+        } else {
+          socket.emit("reporte:confirmado", { msgId, reportes: resultado.reportes });
+        }
+      } catch (err) {
+        console.error("[mensaje:reportar] Error:", err.message);
       }
     });
+
     // ── Eliminar mensaje ─────────────────────────────────────────
     socket.on("mensaje:eliminar", ({ msgId, chatId, paraTodos }) => {
       const userId = socket.data.userId;
@@ -182,31 +215,27 @@ module.exports = function registrarSocketsChat(io) {
     });
 
     // ── Reaccionar a mensaje ─────────────────────────────────────
-    socket.on("mensaje:reaccionar", ({ msgId, chatId, emoji, userId }) => {
-      const key = `${chatId}_${msgId}_${emoji}`;
-      if (!reacciones.has(key)) reacciones.set(key, new Set());
-
-      const usuarios = reacciones.get(key);
-
-      if (usuarios.has(userId)) {
-        usuarios.delete(userId);
+    socket.on("mensaje:reaccionar", async ({ msgId, chatId, emoji, userId }) => {
+      try {
+        const { count, quitar } = await chatService.reaccionarMensaje({ msgId, userId, emoji });
         io.to(`chat_${chatId}`).emit("mensaje:reaccion", {
-          msgId, chatId, emoji,
-          count: usuarios.size,
-          quitar: true,
+          msgId, chatId, emoji, count, quitar,
         });
-      } else {
-        usuarios.add(userId);
-        io.to(`chat_${chatId}`).emit("mensaje:reaccion", {
-          msgId, chatId, emoji,
-          count: usuarios.size,
-          quitar: false,
-        });
+      } catch (err) {
+        console.error("[mensaje:reaccionar] Error:", err.message);
       }
     });
+
     // ── Crear chat privado ────────────────────────────────────────
     socket.on("chat:crear", async ({ userId1, userId2 }) => {
-        console.log(`[chat:crear] userId1: ${userId1}, userId2: ${userId2}`);
+      console.log(`[chat:crear] userId1: ${userId1}, userId2: ${userId2}`);
+
+      if (!esUserIdValido(userId1) || !esUserIdValido(userId2)) {
+        console.error(`[chat:crear] userId inválido: userId1=${userId1}, userId2=${userId2}`);
+        socket.emit("chat:error", { mensaje: "No se pudo crear el chat: usuario inválido" });
+        return;
+      }
+
       try {
         // Verificar si ya existe
         const existe = await pool.query(
@@ -248,19 +277,23 @@ module.exports = function registrarSocketsChat(io) {
         socket.emit("chat:error", { mensaje: "No se pudo crear el chat" });
       }
     });
+
     // ── Desconexión ───────────────────────────────────────────────
     socket.on("disconnect", async () => {
       const { userId, nombre } = socket.data;
       usuariosConectados.delete(socket.id);
 
-      if (userId) {
-        await chatService.actualizarPresencia(userId, "Ausente");
-
-        socket.broadcast.emit("presencia:cambio", {
-          userId,
-          nombre,
-          estado: "Ausente",
-        });
+      if (userId && esUserIdValido(userId)) {
+        try {
+          await chatService.actualizarPresencia(userId, "Ausente");
+          socket.broadcast.emit("presencia:cambio", {
+            userId,
+            nombre,
+            estado: "Ausente",
+          });
+        } catch (err) {
+          console.error(`[disconnect] Error actualizando presencia:`, err.message);
+        }
       }
 
       console.log(`[socket] desconectado: ${socket.id}`);
